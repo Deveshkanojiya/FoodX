@@ -1,153 +1,166 @@
-# FoodX - Food Delivery Backend
+# FoodX
 
-FoodX is a backend application inspired by food delivery platforms like Zomato and Swiggy. The project focuses on scalable backend architecture, authentication, caching, database design, and containerized deployment using modern Java backend technologies.
+> **A production-style food delivery backend built with Spring Boot.**
 
-## Features
+FoodX is a backend application inspired by the core workflows of modern food delivery platforms such as **Swiggy** and **Zomato**. The project focuses on designing scalable REST APIs, secure authentication, caching, containerized deployment, and clean layered architecture using modern Java backend technologies.
 
-### Authentication & Authorization
-
-* User Registration & Login
-* JWT Authentication
-* Refresh Token Mechanism
-* Role-Based Access Control (Customer, Restaurant Owner, Admin)
-* Secure Password Hashing using BCrypt
-
-### Restaurant Management
-
-* Create Restaurant
-* Update Restaurant Details
-* Open / Close Restaurant
-* Disable Restaurant
-* Search Restaurants
-
-### Menu Management
-
-* Create Menu Categories
-* Add Menu Items
-* Update Menu Items
-* Enable / Disable Menu Items
-
-### Cart Management
-
-* Add Items to Cart
-* Update Quantity
-* Remove Items
-* Clear Cart
-
-### Order Management
-
-* Place Orders
-* View Order History
-* Track Order Status
-* Order Status Updates
-
-### Reviews & Ratings
-
-* Create Reviews
-* View Restaurant Reviews
-* Review Management
-
-### Caching
-
-* Redis Integration
-* Restaurant Details Caching
-* Search Result Caching
-* Cache Eviction on Updates
-
-### API Documentation
-
-* Swagger / OpenAPI Integration
-
-### Containerization
-
-* Dockerized Application
-* Docker Compose Setup
-* PostgreSQL Container
-* Redis Container
+![Java](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3-green)
+![Spring Security](https://img.shields.io/badge/Spring_Security-JWT-success)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
+![Redis](https://img.shields.io/badge/Redis-Cache-red)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![Swagger](https://img.shields.io/badge/OpenAPI-Swagger-brightgreen)
+![Maven](https://img.shields.io/badge/Build-Maven-red)
 
 ---
 
-## Tech Stack
+# Features
 
-### Backend
+## Authentication & Security
 
-* Java 21
-* Spring Boot 3
-
-### Security
-
-* Spring Security
-* JWT Authentication
-
-### Database
-
-* PostgreSQL
-
-### Cache
-
-* Redis
-
-### Documentation
-
-* Swagger / OpenAPI
-
-### Containerization
-
-* Docker
-* Docker Compose
-
-### Build Tool
-
-* Maven
-
----
-
-## Key Backend Concepts Implemented
-
-- JWT Access Tokens
+- User Registration & Login
+- JWT Authentication
 - Refresh Token Strategy
-- Stateless Authentication
 - Role-Based Authorization
-- Redis Caching
-- Global Exception Handling
-- DTO Pattern
-- Layered Architecture
-- Dockerized Deployment
+- BCrypt Password Hashing
+- Stateless Authentication
+
+---
+
+## Restaurant Management
+
+- Create Restaurant
+- Update Restaurant Information
+- Open / Close Restaurant
+- Disable Restaurant
+- Search Restaurants
+
+---
+
+## Menu Management
+
+- Create Menu Categories
+- Add Menu Items
+- Update Menu Items
+- Enable / Disable Menu Items
+
+---
+
+## Cart Management
+
+- Add Items to Cart
+- Update Quantity
+- Remove Items
+- Clear Cart
+
+---
+
+## Order Management
+
+- Place Orders
+- Track Order Status
+- Order History
+- Order Status Updates
+
+---
+
+## Reviews
+
+- Create Reviews
+- Restaurant Review Management
+
+---
+
+## Performance
+
+- Redis Integration
+- Restaurant Details Caching
+- Search Result Caching
+- Automatic Cache Eviction
+
+---
+
+## API Documentation
+
+- Swagger UI
 - OpenAPI Documentation
 
 ---
 
-## Architecture
+## Deployment
+
+- Dockerized Spring Boot Application
+- PostgreSQL Container
+- Redis Container
+- Docker Compose Setup
+
+---
+
+# 🛠 Tech Stack
+
+| Category         | Technologies           |
+| ---------------- | ---------------------- |
+| Language         | Java 21                |
+| Framework        | Spring Boot 3          |
+| Security         | Spring Security, JWT   |
+| Database         | PostgreSQL             |
+| Cache            | Redis                  |
+| Documentation    | Swagger / OpenAPI      |
+| Containerization | Docker, Docker Compose |
+| Build Tool       | Maven                  |
+
+---
+
+# ⚙ Backend Concepts Implemented
+
+- Layered Architecture
+- RESTful API Design
+- DTO Pattern
+- JWT Access Tokens
+- Refresh Token Strategy
+- Role-Based Authorization
+- Spring Security Filter Chain
+- Global Exception Handling
+- Redis Caching
+- Stateless Authentication
+- Dockerized Deployment
+
+---
+
+# Architecture
 
 ```text
-Client
-   |
-   v
-Spring Boot REST API
-   |
-   +------> Redis Cache
-   |
-   +------> PostgreSQL Database
+                 Client
+                    │
+                    ▼
+          Spring Boot REST API
+                    │
+       ┌────────────┴────────────┐
+       ▼                         ▼
+ Redis Cache             PostgreSQL Database
 ```
 
-### Application Layers
+---
+
+## Application Layers
 
 ```text
 Controller
-     |
-     v
+     │
+     ▼
 Service
-     |
-     v
+     │
+     ▼
 Repository
-     |
-     v
+     │
+     ▼
 Database
 ```
 
 ---
 
-## Project Structure
+# Project Structure
 
 ```text
 com.foodx
@@ -163,114 +176,126 @@ com.foodx
 ├── restaurant
 ├── review
 ├── security
-├── user
+└── user
 ```
 
 ---
 
-## Screenshots
+# Screenshots
 
-### Swagger UI
+## Swagger UI
 
 ![Swagger UI](images/swagger-home.png)
 
-### Authentication
+---
+
+## JWT Authentication
 
 ![Authentication](images/login-api.png)
 
-### Restaurant APIs
+---
+
+## Restaurant APIs
 
 ![Restaurant APIs](images/restaurant-api.png)
 
-### Docker Containers
+---
+
+## Docker Containers
 
 ![Docker Containers](images/docker-containers.png)
 
-
 ---
 
-## Running with Docker
+# Getting Started
 
-### Clone Repository
+## Clone Repository
 
 ```bash
 git clone https://github.com/Deveshkanojiya/FoodX.git
 cd FoodX
 ```
 
-### Start Application
+---
+
+## Start Application
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-### Check Running Containers
+---
+
+## Check Running Containers
 
 ```bash
 docker ps
 ```
 
-### View Logs
+---
+
+## View Logs
 
 ```bash
 docker logs foodx-app
 ```
 
-### Stop Application
+---
+
+## Stop Application
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ---
 
-## API Documentation
+# API Documentation
 
-Swagger UI:
+After starting the application, Swagger UI is available at:
 
 ```text
 http://localhost:8080/swagger-ui/index.html
 ```
 
-OpenAPI Docs:
+---
 
-```text
-http://localhost:8080/api-docs
-```
+# Production Considerations
+
+This project is intended for learning and portfolio purposes.
+
+A production deployment would typically include:
+
+- Unit & Integration Testing
+- Database Versioning using Flyway
+- CI/CD Pipeline
+- Cloud Deployment (AWS)
+- Secret Management using Environment Variables
+- Rate Limiting
+- Monitoring & Logging
+- Email Notifications
+- Centralized Configuration
 
 ---
 
-## Learning Outcomes
+# Roadmap
 
-This project helped me gain practical experience with:
-
-* Spring Boot Backend Development
-* REST API Design
-* Spring Security
-* JWT Authentication
-* Refresh Token Flow
-* Redis Caching
-* PostgreSQL Integration
-* Docker & Docker Compose
-* API Documentation using Swagger
-* Layered Architecture Design
+- [ ] Unit Testing (JUnit + Mockito)
+- [ ] Integration Testing
+- [ ] Flyway Database Migrations
+- [ ] Pagination & Sorting
+- [ ] Redis-based Rate Limiting
+- [ ] GitHub Actions CI/CD
+- [ ] AWS Deployment
+- [ ] Email Notifications
 
 ---
 
-## Future Improvements
+# Author
 
-* Unit Testing (JUnit + Mockito)
-* Flyway Database Migrations
-* Pagination & Sorting
-* Rate Limiting using Redis
-* Email Notifications
-* CI/CD Pipeline
-* Cloud Deployment (AWS)
+**Devesh Kanojiya**
 
----
+GitHub:
+https://github.com/Deveshkanojiya
 
-## Author
-
-Devesh Kanojiya
-
-GitHub: https://github.com/Deveshkanojiya
+If you found this project helpful, consider giving it a ⭐.
