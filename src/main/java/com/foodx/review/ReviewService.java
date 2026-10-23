@@ -18,6 +18,8 @@ import java.util.UUID;
 @Service
 @Transactional
 public class ReviewService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReviewService.class);
+
     private final ReviewRepository reviewRepository;
     private final FoodOrderRepository orderRepository;
     private final UserRepository userRepository;
@@ -31,12 +33,12 @@ public class ReviewService {
         this.restaurantRepository = restaurantRepository;
     }
 
-    public ReviewDtos.ReviewResponse create(UUID userId, ReviewDtos.CreateReviewRequest request) {
+    public ReviewResponse create(UUID userId, CreateReviewRequest request) {
         User user = findUser(userId);
         FoodOrder order = orderRepository.findById(request.orderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         if (!order.getUser().getId().equals(user.getId())) {
-            throw new BadRequestException("Cannot review another user's order");
+            throw new com.foodx.exception.ForbiddenException("Cannot review another user's order");
         }
         if (order.getStatus() != OrderStatus.DELIVERED) {
             throw new BadRequestException("Only delivered orders can be reviewed");
@@ -51,18 +53,20 @@ public class ReviewService {
         review.setRating(request.rating());
         review.setComment(request.comment());
         review.setStatus(ReviewStatus.PUBLISHED);
-        return toResponse(reviewRepository.save(review));
+        Review saved = reviewRepository.save(review);
+        log.info("Review created: reviewId={}, orderId={}, restaurantId={}, rating={}", saved.getId(), order.getId(), order.getRestaurant().getId(), request.rating());
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<ReviewDtos.ReviewResponse> restaurantReviews(UUID restaurantId) {
+    public List<ReviewResponse> restaurantReviews(UUID restaurantId) {
         return reviewRepository.findByRestaurant(restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found")))
                 .stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ReviewDtos.ReviewResponse> myReviews(UUID userId) {
+    public List<ReviewResponse> myReviews(UUID userId) {
         return reviewRepository.findByUser(findUser(userId)).stream().map(this::toResponse).toList();
     }
 
@@ -70,8 +74,8 @@ public class ReviewService {
         return userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private ReviewDtos.ReviewResponse toResponse(Review review) {
-        return new ReviewDtos.ReviewResponse(review.getId(), review.getOrder().getId(), review.getUser().getId(),
+    private ReviewResponse toResponse(Review review) {
+        return new ReviewResponse(review.getId(), review.getOrder().getId(), review.getUser().getId(),
                 review.getRestaurant().getId(), review.getRating(), review.getComment(), review.getStatus());
     }
 }

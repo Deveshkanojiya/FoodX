@@ -3,9 +3,9 @@ package com.foodx.cart;
 import com.foodx.user.User;
 import com.foodx.user.UserRepository;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,34 +30,34 @@ public class CartController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public CartDtos.CartResponse get(@AuthenticationPrincipal UserDetails principal) {
+    public CartResponse getCart(@AuthenticationPrincipal UserDetails principal) {
         return cartService.getCart(resolveUser(principal).getId());
     }
 
     @PostMapping("/items")
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public CartDtos.CartResponse add(@AuthenticationPrincipal UserDetails principal,
-            @Valid @RequestBody CartDtos.AddItemRequest request) {
+    public CartResponse addItem(@AuthenticationPrincipal UserDetails principal,
+            @Valid @RequestBody AddItemRequest request) {
         return cartService.addItem(resolveUser(principal).getId(), request);
     }
 
     @PutMapping("/items/{cartItemId}")
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public CartDtos.CartResponse update(@AuthenticationPrincipal UserDetails principal,
+    public CartResponse updateQuantity(@AuthenticationPrincipal UserDetails principal,
             @PathVariable UUID cartItemId,
-            @Valid @RequestBody CartDtos.UpdateQuantityRequest request) {
+            @Valid @RequestBody UpdateQuantityRequest request) {
         return cartService.updateQuantity(resolveUser(principal).getId(), cartItemId, request);
     }
 
     @DeleteMapping("/items/{cartItemId}")
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public CartDtos.CartResponse remove(@AuthenticationPrincipal UserDetails principal, @PathVariable UUID cartItemId) {
+    public CartResponse removeItem(@AuthenticationPrincipal UserDetails principal, @PathVariable UUID cartItemId) {
         return cartService.removeItem(resolveUser(principal).getId(), cartItemId);
     }
 
     @DeleteMapping
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public CartDtos.CartResponse clear(@AuthenticationPrincipal UserDetails principal) {
+    public CartResponse clearCart(@AuthenticationPrincipal UserDetails principal) {
         return cartService.clear(resolveUser(principal).getId());
     }
 

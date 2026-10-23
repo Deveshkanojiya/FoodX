@@ -22,46 +22,55 @@ import java.util.UUID;
 @Service
 @Transactional
 public class AuthService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final com.foodx.config.JwtProperties jwtProperties;
 
     public AuthService(UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
             AuthenticationManager authenticationManager,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService) {
+            JwtService jwtService,
+            com.foodx.config.JwtProperties jwtProperties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.jwtProperties = jwtProperties;
     }
 
-    public AuthDtos.AuthResponse register(AuthDtos.RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
             throw new BadRequestException("Email already registered");
+        }
+
+        if (request.role() == com.foodx.common.UserRole.ADMIN) {
+            throw new BadRequestException("ADMIN role cannot be assigned through public registration");
         }
 
         User user = new User();
         user.setEmail(request.email().toLowerCase());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         user.setFullName(request.fullName());
-        user.setRole(request.role());
+        user.setRole(request.role() != null ? request.role() : com.foodx.common.UserRole.CUSTOMER);
         user.setStatus(AccountStatus.ACTIVE);
         user.setEmailVerified(true);
         user = userRepository.save(user);
 
+        log.info("User registered successfully: userId={}, email={}, role={}", user.getId(), user.getEmail(), user.getRole());
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = createRefreshToken(user);
-        return new AuthDtos.AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
+        return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
                 accessToken, refreshToken);
     }
 
-    public AuthDtos.AuthResponse login(AuthDtos.LoginRequest request) {
+    public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email().toLowerCase(), request.password()));
 
@@ -69,32 +78,37 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
 
         if (user.getStatus() != AccountStatus.ACTIVE) {
+            log.warn("Login rejected for non-active user: userId={}, status={}", user.getId(), user.getStatus());
             throw new UnauthorizedException("Account is not active");
         }
 
+        log.info("User logged in successfully: userId={}, email={}", user.getId(), user.getEmail());
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = createRefreshToken(user);
-        return new AuthDtos.AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
+        return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
                 accessToken, refreshToken);
     }
 
-    public AuthDtos.AuthResponse refresh(AuthDtos.RefreshRequest request) {
+    public AuthResponse refresh(RefreshRequest request) {
         RefreshToken token = refreshTokenRepository.findByTokenHash(hash(request.refreshToken()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
         if (token.isRevoked() || token.getExpiresAt().isBefore(Instant.now())) {
+            log.warn("Token refresh rejected: revoked={}, expired={}", token.isRevoked(), token.getExpiresAt().isBefore(Instant.now()));
             throw new UnauthorizedException("Refresh token expired or revoked");
         }
         User user = token.getUser();
+        log.info("Access token refreshed: userId={}", user.getId());
         String accessToken = jwtService.generateAccessToken(user);
-        return new AuthDtos.AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
+        return new AuthResponse(user.getId(), user.getEmail(), user.getFullName(), user.getRole().name(),
                 accessToken, request.refreshToken());
     }
 
-    public void logout(AuthDtos.LogoutRequest request) {
+    public void logout(LogoutRequest request) {
         RefreshToken token = refreshTokenRepository.findByTokenHash(hash(request.refreshToken()))
                 .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
         token.setRevoked(true);
         refreshTokenRepository.save(token);
+        log.info("User logged out successfully: userId={}", token.getUser().getId());
     }
 
     private String createRefreshToken(User user) {
@@ -102,7 +116,7 @@ public class AuthService {
         RefreshToken token = new RefreshToken();
         token.setUser(user);
         token.setTokenHash(hash(raw));
-        token.setExpiresAt(Instant.now().plusSeconds(60L * 60 * 24 * 30));
+        token.setExpiresAt(Instant.now().plusSeconds(60L * 60 * 24 * jwtProperties.refreshTokenTtlDays()));
         token.setRevoked(false);
         refreshTokenRepository.save(token);
         return raw;

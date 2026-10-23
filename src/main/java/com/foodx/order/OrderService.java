@@ -34,7 +34,7 @@ public class OrderService {
         this.userRepository = userRepository;
     }
 
-    public OrderDtos.OrderResponse placeOrder(UUID userId, OrderDtos.PlaceOrderRequest request) {
+    public OrderResponse placeOrder(UUID userId, PlaceOrderRequest request) {
         User user = findUser(userId);
         Cart cart = cartRepository.findById(request.cartId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
@@ -45,11 +45,25 @@ public class OrderService {
             throw new BadRequestException("Cart is empty");
         }
 
+        com.foodx.restaurant.Restaurant restaurant = cart.getRestaurant();
+        if (restaurant == null || restaurant.getStatus() != com.foodx.common.RestaurantStatus.OPEN || !restaurant.isOpenNow()) {
+            throw new BadRequestException("Restaurant is currently closed");
+        }
+
+        for (CartItem cartItem : cart.getItems()) {
+            if (cartItem.getMenuItem().getStatus() != com.foodx.common.MenuItemStatus.ACTIVE) {
+                throw new BadRequestException("Item " + cartItem.getMenuItem().getName() + " is currently unavailable");
+            }
+            if (!cartItem.getMenuItem().getRestaurant().getId().equals(restaurant.getId())) {
+                throw new BadRequestException("Cart contains items from a different restaurant");
+            }
+        }
+
         FoodOrder order = new FoodOrder();
         order.setUser(user);
-        order.setRestaurant(cart.getRestaurant());
+        order.setRestaurant(restaurant);
         order.setCart(cart);
-        order.setOrderNumber("FX-" + System.currentTimeMillis());
+        order.setOrderNumber("FX-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         order.setStatus(OrderStatus.PENDING);
         order.setTotalMinor(
                 cart.getItems().stream().mapToLong(i -> i.getMenuItem().getPriceMinor() * i.getQuantity()).sum());
@@ -72,19 +86,24 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderDtos.OrderResponse> history(UUID userId) {
+    public List<OrderResponse> history(UUID userId) {
         User user = findUser(userId);
         return orderRepository.findByUserOrderByCreatedAtDesc(user).stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<OrderDtos.OrderResponse> restaurantOrders(UUID restaurantId) {
+    public List<OrderResponse> restaurantOrders(UUID restaurantId) {
         return orderRepository.findByRestaurantIdOrderByCreatedAtDesc(restaurantId).stream().map(this::toResponse)
                 .toList();
     }
 
-    public OrderDtos.OrderResponse updateStatus(UUID orderId, OrderDtos.UpdateStatusRequest request) {
+    public OrderResponse updateStatus(UUID currentUserId, UUID orderId, UpdateStatusRequest request) {
         FoodOrder order = findOrder(orderId);
+        User currentUser = findUser(currentUserId);
+        if (currentUser.getRole() != com.foodx.common.UserRole.ADMIN
+                && !order.getRestaurant().getOwner().getId().equals(currentUser.getId())) {
+            throw new com.foodx.exception.ForbiddenException("Only the restaurant owner can update this order's status");
+        }
         if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.DELIVERED) {
             throw new BadRequestException("Order is already finalized");
         }
@@ -97,8 +116,19 @@ public class OrderService {
         return toResponse(orderRepository.save(order));
     }
 
-    public OrderDtos.OrderResponse cancel(UUID orderId) {
-        return updateStatus(orderId, new OrderDtos.UpdateStatusRequest(OrderStatus.CANCELLED));
+    public OrderResponse cancel(UUID currentUserId, UUID orderId) {
+        FoodOrder order = findOrder(orderId);
+        User currentUser = findUser(currentUserId);
+        if (currentUser.getRole() != com.foodx.common.UserRole.ADMIN
+                && !order.getUser().getId().equals(currentUser.getId())) {
+            throw new com.foodx.exception.ForbiddenException("Cannot cancel another user's order");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new BadRequestException("Order is already finalized");
+        }
+        order.setStatus(OrderStatus.CANCELLED);
+        log.info("Order cancelled: {}", order.getOrderNumber());
+        return toResponse(orderRepository.save(order));
     }
 
     public FoodOrder findOrder(UUID id) {
@@ -109,13 +139,13 @@ public class OrderService {
         return userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private OrderDtos.OrderResponse toResponse(FoodOrder order) {
-        List<OrderDtos.OrderItemResponse> items = order.getItems().stream()
-                .map(item -> new OrderDtos.OrderItemResponse(item.getId(),
+    private OrderResponse toResponse(FoodOrder order) {
+        List<OrderItemResponse> items = order.getItems().stream()
+                .map(item -> new OrderItemResponse(item.getId(),
                         item.getMenuItem() == null ? null : item.getMenuItem().getId(), item.getItemName(),
                         item.getQuantity(), item.getUnitPriceMinor(), item.getLineTotalMinor()))
                 .toList();
-        return new OrderDtos.OrderResponse(order.getId(), order.getOrderNumber(), order.getUser().getId(),
+        return new OrderResponse(order.getId(), order.getOrderNumber(), order.getUser().getId(),
                 order.getRestaurant().getId(), order.getStatus(), order.getTotalMinor(), items);
     }
 }

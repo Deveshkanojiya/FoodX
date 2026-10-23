@@ -3,9 +3,9 @@ package com.foodx.order;
 import com.foodx.user.User;
 import com.foodx.user.UserRepository;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,28 +30,31 @@ public class OrderController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public OrderDtos.OrderResponse place(@AuthenticationPrincipal UserDetails principal,
-            @Valid @RequestBody OrderDtos.PlaceOrderRequest request) {
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    public OrderResponse placeOrder(@AuthenticationPrincipal UserDetails principal,
+            @Valid @RequestBody PlaceOrderRequest request) {
         return orderService.placeOrder(resolveUser(principal).getId(), request);
     }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public List<OrderDtos.OrderResponse> history(@AuthenticationPrincipal UserDetails principal) {
+    public List<OrderResponse> getOrderHistory(@AuthenticationPrincipal UserDetails principal) {
         return orderService.history(resolveUser(principal).getId());
     }
 
     @PostMapping("/{orderId}/cancel")
     @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN')")
-    public OrderDtos.OrderResponse cancel(@PathVariable UUID orderId) {
-        return orderService.cancel(orderId);
+    public OrderResponse cancelOrder(@PathVariable UUID orderId,
+            @AuthenticationPrincipal UserDetails principal) {
+        return orderService.cancel(resolveUser(principal).getId(), orderId);
     }
 
     @PutMapping("/{orderId}/status")
     @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
-    public OrderDtos.OrderResponse updateStatus(@PathVariable UUID orderId,
-            @Valid @RequestBody OrderDtos.UpdateStatusRequest request) {
-        return orderService.updateStatus(orderId, request);
+    public OrderResponse updateStatus(@PathVariable UUID orderId,
+            @AuthenticationPrincipal UserDetails principal,
+            @Valid @RequestBody UpdateStatusRequest request) {
+        return orderService.updateStatus(resolveUser(principal).getId(), orderId, request);
     }
 
     private User resolveUser(UserDetails principal) {

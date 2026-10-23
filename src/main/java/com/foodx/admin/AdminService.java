@@ -14,6 +14,8 @@ import java.util.UUID;
 @Service
 @Transactional
 public class AdminService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminService.class);
+
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
     private final FoodOrderRepository orderRepository;
@@ -26,8 +28,8 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminDtos.UserView> users() {
-        return userRepository.findAll().stream().map(u -> new AdminDtos.UserView(u.getId(), u.getEmail(),
+    public List<UserView> getUsers() {
+        return userRepository.findAll().stream().map(u -> new UserView(u.getId(), u.getEmail(),
                 u.getFullName(), u.getRole().name(), u.getStatus())).toList();
     }
 
@@ -35,27 +37,30 @@ public class AdminService {
         userRepository.findById(userId).ifPresent(user -> {
             user.setStatus(AccountStatus.SUSPENDED);
             userRepository.save(user);
+            log.warn("Admin suspended user: userId={}", userId);
         });
     }
 
     @Transactional(readOnly = true)
-    public List<AdminDtos.RestaurantView> restaurants() {
+    public List<RestaurantView> getRestaurants() {
         return restaurantRepository.findAll().stream()
-                .map(r -> new AdminDtos.RestaurantView(r.getId(), r.getName(), r.getCity(), r.getStatus())).toList();
+                .map(r -> new RestaurantView(r.getId(), r.getName(), r.getCity(), r.getStatus())).toList();
     }
 
+    @org.springframework.cache.annotation.CacheEvict(cacheNames = { com.foodx.config.CacheNames.RESTAURANT_DETAILS, com.foodx.config.CacheNames.RESTAURANT_LIST, com.foodx.config.CacheNames.POPULAR_RESTAURANTS }, allEntries = true)
     public void disableRestaurant(UUID restaurantId) {
         restaurantRepository.findById(restaurantId).ifPresent(restaurant -> {
             restaurant.setStatus(RestaurantStatus.DISABLED);
             restaurant.setOpenNow(false);
             restaurantRepository.save(restaurant);
+            log.warn("Admin disabled restaurant: restaurantId={}", restaurantId);
         });
     }
 
     @Transactional(readOnly = true)
-    public List<AdminDtos.OrderView> orders() {
+    public List<OrderView> getOrders() {
         return orderRepository.findAll().stream()
-                .map(o -> new AdminDtos.OrderView(o.getId(), o.getOrderNumber(), o.getStatus(), o.getTotalMinor()))
+                .map(o -> new OrderView(o.getId(), o.getOrderNumber(), o.getStatus(), o.getTotalMinor()))
                 .toList();
     }
 }

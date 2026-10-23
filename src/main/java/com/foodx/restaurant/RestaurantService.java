@@ -1,5 +1,6 @@
 package com.foodx.restaurant;
 
+import com.foodx.config.CacheNames;
 import com.foodx.common.RestaurantStatus;
 import com.foodx.exception.ResourceNotFoundException;
 import com.foodx.user.User;
@@ -27,7 +28,7 @@ public class RestaurantService {
         this.userRepository = userRepository;
     }
 
-    public RestaurantDtos.RestaurantResponse create(UUID ownerId, RestaurantDtos.CreateRestaurantRequest request) {
+    public RestaurantResponse create(UUID ownerId, RestaurantRequest request) {
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
         Restaurant restaurant = new Restaurant();
@@ -44,60 +45,81 @@ public class RestaurantService {
         return toResponse(saved);
     }
 
-    @Cacheable(cacheNames = "restaurantDetails", key = "#id")
+    @Cacheable(cacheNames = CacheNames.RESTAURANT_DETAILS, key = "#id")
     @Transactional(readOnly = true)
-    public RestaurantDtos.RestaurantResponse get(UUID id) {
+    public RestaurantResponse get(UUID id) {
         return toResponse(findRestaurant(id));
     }
 
-    @Cacheable(cacheNames = "restaurantList", key = "#search")
+    @Cacheable(cacheNames = CacheNames.RESTAURANT_LIST, key = "#search")
     @Transactional(readOnly = true)
-    public List<RestaurantDtos.RestaurantResponse> search(String search) {
+    public List<RestaurantResponse> search(String search) {
         List<Restaurant> restaurants = (search == null || search.isBlank())
                 ? restaurantRepository.findAll()
                 : restaurantRepository.findByNameContainingIgnoreCaseOrCityContainingIgnoreCase(search, search);
         return restaurants.stream().map(this::toResponse).toList();
     }
 
-    public List<RestaurantDtos.RestaurantResponse> listByOwner(UUID ownerId) {
+    @Transactional(readOnly = true)
+    public List<RestaurantResponse> listByOwner(UUID ownerId) {
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Owner not found"));
         return restaurantRepository.findByOwner(owner).stream().map(this::toResponse).toList();
     }
 
-    public RestaurantDtos.RestaurantResponse update(UUID id, RestaurantDtos.UpdateRestaurantRequest request) {
+    @CacheEvict(cacheNames = { CacheNames.RESTAURANT_DETAILS, CacheNames.RESTAURANT_LIST, CacheNames.POPULAR_RESTAURANTS }, allEntries = true)
+    public RestaurantResponse update(UUID id, UUID currentUserId, RestaurantRequest request) {
         Restaurant restaurant = findRestaurant(id);
+        verifyOwnership(restaurant, currentUserId);
         restaurant.setName(request.name());
         restaurant.setSlug(request.slug());
         restaurant.setDescription(request.description());
         restaurant.setCity(request.city());
         restaurant.setAddress(request.address());
         Restaurant saved = restaurantRepository.save(restaurant);
+        log.info("Restaurant updated: restaurantId={}", saved.getId());
         return toResponse(saved);
     }
 
-    @CacheEvict(cacheNames = { "restaurantDetails", "restaurantList", "popularRestaurants" }, allEntries = true)
-    public RestaurantDtos.RestaurantResponse open(UUID id) {
+    @CacheEvict(cacheNames = { CacheNames.RESTAURANT_DETAILS, CacheNames.RESTAURANT_LIST, CacheNames.POPULAR_RESTAURANTS }, allEntries = true)
+    public RestaurantResponse open(UUID id, UUID currentUserId) {
         Restaurant restaurant = findRestaurant(id);
+        verifyOwnership(restaurant, currentUserId);
         restaurant.setStatus(RestaurantStatus.OPEN);
         restaurant.setOpenNow(true);
-        return toResponse(restaurantRepository.save(restaurant));
+        Restaurant saved = restaurantRepository.save(restaurant);
+        log.info("Restaurant opened: restaurantId={}", saved.getId());
+        return toResponse(saved);
     }
 
-    @CacheEvict(cacheNames = { "restaurantDetails", "restaurantList", "popularRestaurants" }, allEntries = true)
-    public RestaurantDtos.RestaurantResponse close(UUID id) {
+    @CacheEvict(cacheNames = { CacheNames.RESTAURANT_DETAILS, CacheNames.RESTAURANT_LIST, CacheNames.POPULAR_RESTAURANTS }, allEntries = true)
+    public RestaurantResponse close(UUID id, UUID currentUserId) {
         Restaurant restaurant = findRestaurant(id);
+        verifyOwnership(restaurant, currentUserId);
         restaurant.setStatus(RestaurantStatus.CLOSED);
         restaurant.setOpenNow(false);
-        return toResponse(restaurantRepository.save(restaurant));
+        Restaurant saved = restaurantRepository.save(restaurant);
+        log.info("Restaurant closed: restaurantId={}", saved.getId());
+        return toResponse(saved);
     }
 
-    @CacheEvict(cacheNames = { "restaurantDetails", "restaurantList", "popularRestaurants" }, allEntries = true)
-    public RestaurantDtos.RestaurantResponse disable(UUID id) {
+    @CacheEvict(cacheNames = { CacheNames.RESTAURANT_DETAILS, CacheNames.RESTAURANT_LIST, CacheNames.POPULAR_RESTAURANTS }, allEntries = true)
+    public RestaurantResponse disable(UUID id, UUID currentUserId) {
         Restaurant restaurant = findRestaurant(id);
+        verifyOwnership(restaurant, currentUserId);
         restaurant.setStatus(RestaurantStatus.DISABLED);
         restaurant.setOpenNow(false);
-        return toResponse(restaurantRepository.save(restaurant));
+        Restaurant saved = restaurantRepository.save(restaurant);
+        log.warn("Restaurant disabled: restaurantId={}", saved.getId());
+        return toResponse(saved);
+    }
+
+    public void verifyOwnership(Restaurant restaurant, UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getRole() != com.foodx.common.UserRole.ADMIN && !restaurant.getOwner().getId().equals(user.getId())) {
+            throw new com.foodx.exception.ForbiddenException("You do not have permission to modify this restaurant");
+        }
     }
 
     public Restaurant findRestaurant(UUID id) {
@@ -105,8 +127,8 @@ public class RestaurantService {
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
     }
 
-    private RestaurantDtos.RestaurantResponse toResponse(Restaurant restaurant) {
-        return new RestaurantDtos.RestaurantResponse(
+    private RestaurantResponse toResponse(Restaurant restaurant) {
+        return new RestaurantResponse(
                 restaurant.getId(),
                 restaurant.getOwner().getId(),
                 restaurant.getName(),

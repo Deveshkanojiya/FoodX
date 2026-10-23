@@ -17,6 +17,8 @@ import java.util.UUID;
 @Service
 @Transactional
 public class CartService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CartService.class);
+
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
@@ -31,15 +33,21 @@ public class CartService {
         this.menuItemRepository = menuItemRepository;
     }
 
-    public CartDtos.CartResponse getCart(UUID userId) {
+    public CartResponse getCart(UUID userId) {
         Cart cart = cartRepository.findByUserAndActiveTrue(findUser(userId)).orElseGet(() -> createEmptyCart(userId));
         return toResponse(cart);
     }
 
-    public CartDtos.CartResponse addItem(UUID userId, CartDtos.AddItemRequest request) {
+    public CartResponse addItem(UUID userId, AddItemRequest request) {
         User user = findUser(userId);
         Restaurant restaurant = findRestaurant(request.restaurantId());
         MenuItem item = findItem(request.menuItemId());
+        if (!item.getRestaurant().getId().equals(restaurant.getId())) {
+            throw new BadRequestException("Menu item does not belong to specified restaurant");
+        }
+        if (item.getStatus() != com.foodx.common.MenuItemStatus.ACTIVE) {
+            throw new BadRequestException("Menu item is currently unavailable");
+        }
         Cart cart = cartRepository.findByUserAndActiveTrue(user).orElseGet(() -> createCart(user, restaurant));
         if (cart.getRestaurant() != null && !cart.getRestaurant().getId().equals(restaurant.getId())) {
             throw new BadRequestException("Cart can contain items from one restaurant only");
@@ -60,29 +68,33 @@ public class CartService {
                 });
         cartItem.setQuantity(cartItem.getQuantity() + request.quantity());
         cartRepository.save(cart);
+        log.info("Item added to cart: cartId={}, menuItemId={}, quantity={}", cart.getId(), item.getId(), request.quantity());
         return toResponse(cart);
     }
 
-    public CartDtos.CartResponse updateQuantity(UUID userId, UUID cartItemId, CartDtos.UpdateQuantityRequest request) {
+    public CartResponse updateQuantity(UUID userId, UUID cartItemId, UpdateQuantityRequest request) {
         Cart cart = getActiveCart(userId);
         CartItem item = cart.getItems().stream().filter(ci -> ci.getId().equals(cartItemId)).findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
         item.setQuantity(request.quantity());
         cartRepository.save(cart);
+        log.info("Cart item quantity updated: cartItemId={}, quantity={}", cartItemId, request.quantity());
         return toResponse(cart);
     }
 
-    public CartDtos.CartResponse removeItem(UUID userId, UUID cartItemId) {
+    public CartResponse removeItem(UUID userId, UUID cartItemId) {
         Cart cart = getActiveCart(userId);
         cart.getItems().removeIf(ci -> ci.getId().equals(cartItemId));
         cartRepository.save(cart);
+        log.info("Cart item removed: cartItemId={}", cartItemId);
         return toResponse(cart);
     }
 
-    public CartDtos.CartResponse clear(UUID userId) {
+    public CartResponse clear(UUID userId) {
         Cart cart = getActiveCart(userId);
         cart.getItems().clear();
         cartRepository.save(cart);
+        log.info("Cart cleared: cartId={}", cart.getId());
         return toResponse(cart);
     }
 
@@ -118,12 +130,12 @@ public class CartService {
         return menuItemRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
     }
 
-    private CartDtos.CartResponse toResponse(Cart cart) {
-        List<CartDtos.CartItemResponse> items = cart.getItems().stream()
-                .map(item -> new CartDtos.CartItemResponse(item.getId(), item.getMenuItem().getId(),
+    private CartResponse toResponse(Cart cart) {
+        List<CartItemResponse> items = cart.getItems().stream()
+                .map(item -> new CartItemResponse(item.getId(), item.getMenuItem().getId(),
                         item.getMenuItem().getName(), item.getQuantity()))
                 .toList();
-        return new CartDtos.CartResponse(cart.getId(),
+        return new CartResponse(cart.getId(),
                 cart.getRestaurant() == null ? null : cart.getRestaurant().getId(), cart.getUser().getId(), items);
     }
 }

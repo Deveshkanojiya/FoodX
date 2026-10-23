@@ -21,31 +21,33 @@ public class AdminController {
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<AdminDtos.UserView> users() {
-        return adminService.users();
+    public List<UserView> getUsers() {
+        return adminService.getUsers();
     }
 
     @PostMapping("/users/{userId}/suspend")
     @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     public void suspendUser(@PathVariable UUID userId) {
         adminService.suspendUser(userId);
     }
 
     @GetMapping("/restaurants")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<AdminDtos.RestaurantView> restaurants() {
-        return adminService.restaurants();
+    public List<RestaurantView> getRestaurants() {
+        return adminService.getRestaurants();
     }
 
     @PostMapping("/restaurants/{restaurantId}/disable")
     @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     public void disableRestaurant(@PathVariable UUID restaurantId) {
         adminService.disableRestaurant(restaurantId);
     }
 
     @GetMapping("/orders")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<AdminDtos.OrderView> orders() {
-        return adminService.orders();
+    public List<OrderView> getOrders() {
+        return adminService.getOrders();
     }
 }
