@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     container_name: foodx-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: foodx
       POSTGRES_USER: foodx
@@ -10,21 +11,41 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodx -d foodx"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - foodx-network
 
   redis:
     image: redis:7
     container_name: foodx-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - foodx-network
 
   app:
     build: .
     container_name: foodx-app
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/foodx
       SPRING_DATASOURCE_USERNAME: foodx
@@ -34,7 +55,13 @@ services:
       JWT_SECRET: TO_BE_REPLACED_IN_PRODUCTION_WITH_A_LONGER_KEY================
     ports:
       - "8080:8080"
+    networks:
+      - foodx-network
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  foodx-network:
+    driver: bridge

@@ -51,7 +51,7 @@ public class RestaurantService {
         return toResponse(findRestaurant(id));
     }
 
-    @Cacheable(cacheNames = CacheNames.RESTAURANT_LIST, key = "#search")
+    @Cacheable(cacheNames = CacheNames.RESTAURANT_LIST, key = "#search != null ? #search : 'ALL'")
     @Transactional(readOnly = true)
     public List<RestaurantResponse> search(String search) {
         List<Restaurant> restaurants = (search == null || search.isBlank())

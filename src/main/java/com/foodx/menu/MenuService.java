@@ -117,7 +117,7 @@ public class MenuService {
         return categoryRepository.findByRestaurant(restaurant).stream().map(this::toCategoryResponse).toList();
     }
 
-    @Cacheable(cacheNames = CacheNames.MENU_ITEMS_BY_RESTAURANT, key = "#restaurantId + ':' + #q")
+    @Cacheable(cacheNames = CacheNames.MENU_ITEMS_BY_RESTAURANT, key = "#restaurantId + ':' + (#q != null ? #q : 'ALL')")
     @Transactional(readOnly = true)
     public List<ItemResponse> listItems(UUID restaurantId, String q) {
         Restaurant restaurant = findRestaurant(restaurantId);
