@@ -39,7 +39,11 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/actuator/health")
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/actuator/health",
+                                "/actuator/info",
+                                "/actuator/prometheus")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/restaurants/owner/mine").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/restaurants/**").permitAll()
