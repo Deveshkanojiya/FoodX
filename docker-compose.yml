@@ -75,10 +75,24 @@ services:
     networks:
       - foodx-network
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: foodx-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - foodx-network
+
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
+  grafana_data:
 
 networks:
   foodx-network:
