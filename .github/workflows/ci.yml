@@ -41,14 +41,25 @@ jobs:
         if: github.event_name == 'push'
         run: docker push deveshcodess/foodx:latest
 
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          debug: true
-          script: |
-            whoami
-            pwd 
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Add EC2 to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH
+          run: |
+          ssh ubuntu@${{ secrets.EC2_HOST }} "whoami && pwd"
+
+      - name: Deploy
+        run: |
+          ssh ubuntu@${{ secrets.EC2_HOST }} "
+            cd ~/foodx &&
+            docker compose pull &&
+            docker compose up -d &&
+            docker image prune -f
+          "   
