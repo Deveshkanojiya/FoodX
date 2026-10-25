@@ -42,14 +42,13 @@ jobs:
         run: docker push deveshcodess/foodx:latest
 
       - name: Deploy to EC2
-        if: github.event_name == 'push'
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          debug: true
           script: |
-            cd ~/foodx
-            docker compose pull
-            docker compose up -d
-            docker image prune -f
+            whoami
+            pwd 
