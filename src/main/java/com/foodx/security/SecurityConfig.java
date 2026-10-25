@@ -42,7 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/actuator/health",
-                                "/actuator/info",
+                                "/actuator/info", "/test",
                                 "/actuator/prometheus")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/restaurants/owner/mine").authenticated()
