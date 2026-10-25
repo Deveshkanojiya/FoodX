@@ -1,20 +1,20 @@
-name : Foodx-ci 
+name: FoodX CI/CD
 
-on: 
+on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
 
-jobs :
+jobs:
   build:
-    
+
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -27,7 +27,7 @@ jobs :
 
       - name: Build Project
         run: mvn clean package
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -36,6 +36,20 @@ jobs :
 
       - name: Build Docker Image
         run: docker build -t deveshcodess/foodx:latest .
-      
+
       - name: Push Docker Image
+        if: github.event_name == 'push'
         run: docker push deveshcodess/foodx:latest
+
+      - name: Deploy to EC2
+        if: github.event_name == 'push'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/foodx
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
