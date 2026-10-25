@@ -4,9 +4,9 @@ services:
     container_name: foodx-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: foodx
-      POSTGRES_USER: foodx
-      POSTGRES_PASSWORD: foodx
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -38,7 +38,7 @@ services:
       - foodx-network
 
   app:
-    build: .
+    image: deveshcodess/foodx:latest
     container_name: foodx-app
     restart: unless-stopped
     depends_on:
@@ -47,12 +47,12 @@ services:
       redis:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/foodx
-      SPRING_DATASOURCE_USERNAME: foodx
-      SPRING_DATASOURCE_PASSWORD: foodx
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      JWT_SECRET: TO_BE_REPLACED_IN_PRODUCTION_WITH_A_LONGER_KEY================
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT}
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
     networks:
