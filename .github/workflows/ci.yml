@@ -52,7 +52,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       - name: Test SSH
-          run: |
+        run: |
           ssh ubuntu@${{ secrets.EC2_HOST }} "whoami && pwd"
 
       - name: Deploy
